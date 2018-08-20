@@ -4,6 +4,7 @@ import os
 import CF
 import time
 import argparse
+import urllib2
 
 import sys
 
@@ -16,7 +17,7 @@ defaults = {
             'Blast_E_Value' : "1e-3",
             'Consensus_Threshold' : "0",#need to check if zero will give desired results. Might need to be 1
             'Consensus_Ratio' : "7",
-            'Use_Complete_sequences' : "True",
+            'Use_Complete_sequences' : "False",
             'Alignment_Iterations' : "1",
             'Maximum_Redundancy_Threshold' : "0.9",
             'Logging' : "False",
@@ -31,6 +32,7 @@ defaults = {
             }
 
 
+
 parser = argparse.ArgumentParser(description='Settings',prog='pyconsensus_finder.py',epilog='If no arguments specified on the command line, options will be read form the config file: '+configfile)
 parser.add_argument('-q', '--query', metavar='FILENAME.FSTA',dest='FILENAME',type=str,default=defaults['File_Name'],help='query file to be analyzed')
 parser.add_argument('-a', '-emailaddress',metavar='NAME@EXAMPLE.COM',dest='EMAIL',type=str,default=defaults['Email'],help='Entrez requires an email address to moitor usage')
@@ -43,15 +45,22 @@ parser.add_argument('-i', '--iter',metavar='X',dest='ALIGNMENTITERATIONS',type=i
 parser.add_argument('-r', '--redundancy',metavar='0.X',dest='MAXIMUMREDUNDANCYTHRESHOLD',type=float,default=defaults['Maximum_Redundancy_Threshold'],help='Maximum identity for redundant sequence cutoff by CD-HIT')
 parser.add_argument('-k', '--keeptemp',dest='KEEPTEMPFILES',action='store_true',default=defaults['Keep_Temp_Files'],help='Keep temporary files for troubleshooting')
 parser.add_argument('-l', '--logging',dest='LOGGING',action='store_true',default=defaults['Logging'],help='Turn on logging for troubleshooting')
+parser.add_argument('--PDB',metavar='code',dest='PDB',type=str,default=defaults['PDB_Name'],help="Four letter PDB ID")
 #options commented out for future use 
 #parser.add_argument('--chain',metavar="letter",dest="CHAIN",type=str,default=defaults['Chain'],help="Protein chain from PDB")
 #parser.add_argument('--residue',metavar="number",dest="RESIDUE",type=int,default=defaults['Residue'],help="Residue number from PDB")
-#parser.add_argument('--PDB',metavar="code",dest="PDB",type=str,default=defaults['PDB_Name'],help="Four letter PDB ID")
 #parser.add_argument('--angstroms',metavar="X",dest"ANG",type=float,default=defaults['Angstrom']help="Distance in Angstroms")
 parser.add_argument('--BLAST',type=str,default=defaults['Blast_binary'],help=argparse.SUPPRESS)
 parser.add_argument('--CDHIT',type=str,default=defaults['CDHIT_binary'],help=argparse.SUPPRESS)
 parser.add_argument('--CLUSTAL',type=str,default=defaults['ClustalO_binary'],help=argparse.SUPPRESS)
 args = parser.parse_args()
+
+if args.PDB:
+    response = urllib2.urlopen('https://www.rcsb.org/pdb/download/downloadFastaFiles.do?structureIdList={}&compressionType=uncompressed'.format(args.PDB))
+    html = response.read()
+    with open(HOME+'/uploads/{}.fasta'.format(args.PDB), 'wb') as f:  
+        f.write(html)
+    args.FILENAME='{}.fasta'.format(args.PDB)
 
 programstart = time.time()
 #If command line variables are specified, use those.
