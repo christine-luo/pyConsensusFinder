@@ -132,8 +132,25 @@ class checks(object):
         if not os.path.isfile(HOME+'/uploads/'+settings.FILENAME):
             cleanexit('No query file. File '+settings.FILENAME+' does not exist in uploads directory.')
         if not 1 == (len(list(Bio.SeqIO.parse(HOME+'/uploads/'+settings.FILENAME, "fasta")))):
-            message = "WARNING, MORE THAN ONE SEQUENCE FOUND IN "+settings.FILENAME+". Using only the first sequence. "
+            print(list(Bio.SeqIO.parse(HOME+'/uploads/'+settings.FILENAME, "fasta")))
+            outputBase = '{}'.format(settings.PDB) # output.1.txt, output.2.txt, etc.
+            input = open(HOME+'/uploads/'+settings.FILENAME, 'r').read().replace('>','#>').split('#')
+            at = 1
+            for lines in range(1, len(input), 1):
+             # First, get the list slice
+                outputData = input[lines:lines+1]
+                # Now open the output file, join the new slice with newlines
+                # and write it out. Then close the file.
+                output = open(HOME+'/uploads/'+outputBase + '-' + str(at) + '.fasta', 'w')
+                output.write('\n'.join(outputData))
+                output.close()
+                # Increment the counter
+                at += 1
+
+
+            message = "WARNING, MORE THAN ONE SEQUENCE FOUND IN "+settings.FILENAME+". Using only the first sequence."
             print message
+            settings.FILENAME=settings.PDB+'-1'+'.fasta'
             self.warnings.append(message)
         #check to verify the file is a protein sequence
         protonly = ('F','L','I','M','V','S','P','Y','H','Q','K','D','E','W','R','f','l','i','m','v','s','p','y','h','q','k','d','e','w','r')
