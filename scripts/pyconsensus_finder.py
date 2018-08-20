@@ -55,7 +55,7 @@ parser.add_argument('--CDHIT',type=str,default=defaults['CDHIT_binary'],help=arg
 parser.add_argument('--CLUSTAL',type=str,default=defaults['ClustalO_binary'],help=argparse.SUPPRESS)
 args = parser.parse_args()
 
-if args.PDB:
+if args.PDB is not None:
     response = urllib2.urlopen('https://www.rcsb.org/pdb/download/downloadFastaFiles.do?structureIdList={}&compressionType=uncompressed'.format(args.PDB))
     html = response.read()
     with open(HOME+'/uploads/{}.fasta'.format(args.PDB), 'wb') as f:  
