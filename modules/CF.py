@@ -54,16 +54,29 @@ class CF(object):
             cleanexit('CD-HIT returned zero sequences. Cannot continue without sequences.', keeptemp=settings.KEEPTEMPFILES)
         self.clustalo=runclustalo(settings,self.cdhit.out)
         #processing steps from analyze module.
-        self.aaaray = analyze.aaaray(self.clustalo.out)
-        self.trimmed = analyze.trimmer(self.aaaray, sequenceids=self.clustalo.out, filename=trimmed_output)
-        self.counts = analyze.aacounts(self.trimmed, filename=counts_output)
-        self.freqs = analyze.aafrequencies(self.counts, filename=freqs_output)
-        self.consensus = analyze.consensus(self.freqs, filename=consensus_output)
-        self.mutations, self.output = analyze.mutations(settings, self.trimmed, self.freqs)
-        self.warnings=warnings + self.blast.warnings
-        self.settings = settings
-        if write:
-            analyze.saveoutput(settings, self.warnings, self.output, summary_output)
+        
+        #PART OF CODE TO LOOP
+        output = open(HOME+'/completed/' + 'machine-learning' + '.txt', 'w+')
+
+        for settings.RATIO in range(1, 101):
+            self.aaaray = analyze.aaaray(self.clustalo.out)
+            self.trimmed = analyze.trimmer(self.aaaray, sequenceids=self.clustalo.out, filename=trimmed_output)
+            self.counts = analyze.aacounts(self.trimmed, filename=counts_output)
+            self.freqs = analyze.aafrequencies(self.counts, filename=freqs_output)
+            self.consensus = analyze.consensus(self.freqs, filename=consensus_output)
+            self.mutations, self.output = analyze.mutations(settings, self.trimmed, self.freqs)
+            self.warnings=warnings + self.blast.warnings
+            self.settings = settings
+            if write:
+                analyze.saveoutput(settings, self.warnings, self.output, summary_output)
+            message = 'The consensus ratio is: ' + str(settings.RATIO)
+            
+            print message
+
+            for i in self.output[:]:
+                print(i)
+                output.write(i + '\n')
+        output.close()
 
 #clean up any files in /processing and exit the program displaying any error messages.
 def cleanexit(message=None, keeptemp=False): #function to exit cleanly by deleting any temporary files (unless indicated to save them)
@@ -132,7 +145,7 @@ class checks(object):
         if not os.path.isfile(HOME+'/uploads/'+settings.FILENAME):
             cleanexit('No query file. File '+settings.FILENAME+' does not exist in uploads directory.')
         if not 1 == (len(list(Bio.SeqIO.parse(HOME+'/uploads/'+settings.FILENAME, "fasta")))):
-            print(list(Bio.SeqIO.parse(HOME+'/uploads/'+settings.FILENAME, "fasta")))
+            #print(list(Bio.SeqIO.parse(HOME+'/uploads/'+settings.FILENAME, "fasta")))
             outputBase = '{}'.format(settings.PDB) # output.1.txt, output.2.txt, etc.
             input = open(HOME+'/uploads/'+settings.FILENAME, 'r').read().replace('>','#>').split('#')
             at = 1
@@ -141,17 +154,22 @@ class checks(object):
                 outputData = input[lines:lines+1]
                 # Now open the output file, join the new slice with newlines
                 # and write it out. Then close the file.
-                output = open(HOME+'/uploads/'+outputBase + '-' + str(at) + '.fasta', 'w')
+                output = open(HOME+'/uploads/' + outputBase + '-' + str(at) + '.fasta', 'w+')
                 output.write('\n'.join(outputData))
+                output.seek(6)
+                chainLetter = output.read(1)
+                os.rename(HOME+'/uploads/'+ outputBase + '-' + str(at) + '.fasta',HOME+'/uploads/'+ outputBase + '-' + '{}'.format(chainLetter) + '.fasta')
                 output.close()
                 # Increment the counter
-                at += 1
-
-
-            message = "WARNING, MORE THAN ONE SEQUENCE FOUND IN "+settings.FILENAME+". Using only the first sequence."
-            print message
-            settings.FILENAME=settings.PDB+'-1'+'.fasta'
-            self.warnings.append(message)
+            if settings.CHAIN:
+                settings.FILENAME=settings.PDB+'-{}'.format(settings.CHAIN)+'.fasta'
+                message = "Using Chain {}".format(settings.CHAIN)
+                print message
+            else:
+                message = "WARNING, MORE THAN ONE SEQUENCE FOUND IN "+settings.FILENAME+". Using only the first sequence."
+                print message
+                settings.FILENAME=settings.PDB+'-A'+'.fasta'
+                self.warnings.append(message)
         #check to verify the file is a protein sequence
         protonly = ('F','L','I','M','V','S','P','Y','H','Q','K','D','E','W','R','f','l','i','m','v','s','p','y','h','q','k','d','e','w','r')
         hasprotonly=0
@@ -303,7 +321,7 @@ class runcdhit(object):
         self.out.append(next(Bio.SeqIO.parse(HOME+'/uploads/'+settings.FILENAME, "fasta"))) #add query sequence to list as Bio SeqRecord object
         for record in Bio.SeqIO.parse(cdhitoutput, "fasta"): #add other sequences to list as Bio SeqRecord objects
             self.out.append(record)
-        print(str(len(self.out))+' sequences after removind redundants.')
+        print(str(len(self.out))+' sequences after removing redundants.')
         if filename is not None:
             Bio.SeqIO.write(self.out, filename, "fasta")
         os.remove(cdhitinput)
