@@ -46,40 +46,44 @@ class CF(object):
             consensus_output=None
             summary_output=None
         #run binaries, pass results from blast to cdhit, and from cdhit to clustalo
-        self.blast=runblast(settings)
-        if len(self.blast.versions)==0: #sanity check, make sure we have data
-            cleanexit('Blast Returned zero hits', keeptemp=settings.KEEPTEMPFILES)
-        self.cdhit=runcdhit(settings,self.blast.out)
-        if len(self.cdhit.out)==0: #sanity check, make sure we have data
-            cleanexit('CD-HIT returned zero sequences. Cannot continue without sequences.', keeptemp=settings.KEEPTEMPFILES)
-        self.clustalo=runclustalo(settings,self.cdhit.out)
-        #processing steps from analyze module.
         
-        #PART OF CODE TO LOOP
-        output = open(HOME+'/completed/' + 'machine-learning' + '.txt', 'w+')
-
-        for settings.RATIO in range(1, 101):
-            self.aaaray = analyze.aaaray(self.clustalo.out)
-            self.trimmed = analyze.trimmer(self.aaaray, sequenceids=self.clustalo.out, filename=trimmed_output)
-            self.counts = analyze.aacounts(self.trimmed, filename=counts_output)
-            self.freqs = analyze.aafrequencies(self.counts, filename=freqs_output)
-            self.consensus = analyze.consensus(self.freqs, filename=consensus_output)
-            self.mutations, self.output = analyze.mutations(settings, self.trimmed, self.freqs)
-            self.warnings=warnings + self.blast.warnings
-            self.settings = settings
-            if write:
-                analyze.saveoutput(settings, self.warnings, self.output, summary_output)
-            message = 'The consensus ratio is: ' + str(settings.RATIO)
+        self.blastmod=runblastmod(settings)
+        self.maxblast=200
+        for self.maxblast in range(5000, 0,-500):
+            self.blast=runblast(settings,self)
+            if len(self.blast.versions)==0: #sanity check, make sure we have data
+                print 'Blast Returned zero hits'
+            print 'maximum blast sequences:' + self.maxblast
+            self.cdhit=runcdhit(settings,self.blast.out)
+            if len(self.cdhit.out)==0: #sanity check, make sure we have data
+                cleanexit('CD-HIT returned zero sequences. Cannot continue without sequences.', keeptemp=settings.KEEPTEMPFILES)
+            self.clustalo=runclustalo(settings,self.cdhit.out)
             
-            print message
+                #processing steps from analyze module.
+                 #LOOP analyze module
+            output = open(HOME+'/completed/' + 'machine-learning' + '.txt', 'w+')
+            for settings.RATIO in range(1, 101):
+                self.aaaray = analyze.aaaray(self.clustalo.out)
+                self.trimmed = analyze.trimmer(self.aaaray, sequenceids=self.clustalo.out, filename=trimmed_output)
+                self.counts = analyze.aacounts(self.trimmed, filename=counts_output)
+                self.freqs = analyze.aafrequencies(self.counts, filename=freqs_output)
+                self.consensus = analyze.consensus(self.freqs, filename=consensus_output)
+                self.mutations, self.output = analyze.mutations(settings, self.trimmed, self.freqs)
+                self.warnings=warnings + self.blast.warnings
+                self.settings = settings
+                if write:
+                    analyze.saveoutput(settings, self.warnings, self.output, summary_output)
+                message = 'The consensus ratio is: ' + str(settings.RATIO)
+                print message
+                output.write(message + '\n')
+                for i in self.output[:]:
+                    print(i)
+                    output.write(i + '\n')
+            output.close()
 
-            for i in self.output[:]:
-                print(i)
-                output.write(i + '\n')
-        output.close()
 
 #clean up any files in /processing and exit the program displaying any error messages.
-def cleanexit(message=None, keeptemp=False): #function to exit cleanly by deleting any temporary files (unless indicated to save them)
+def cleanexit(message=None,keeptemp=False): #function to exit cleanly by deleting any temporary files (unless indicated to save them)
     if keeptemp:
         print('Leaving temporary files')
     else:
@@ -188,13 +192,14 @@ class checks(object):
 #Run Blast
 #returns 'warnings'= warning if blast settings were changed, 'blastout'=blast results as Bio SeqRecord objects, 'versions'=list of version numbers, 'out'=list of complete sequences as Bio SeqRecord objects, and (if 'filename' is given) writes output to fasta formatted file
 class runblast(object):
-    def __init__(self, settings, filename=None):
-        RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs '+str(settings.MAXIMUMSEQUENCES)+' -outfmt "6 sacc sseq pident" -remote' 
+    def __init__(self, settings, CF, filename=None):
+        RUNBLAST = settings.BLAST+' -db machlearn_database -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs '+str(CF.maxblast)+' -outfmt "6 sacc sseq pident"' 
         print "\nBegining BLAST search of NCBI. This will take a few minutes."
+        print RUNBLAST
         start = time.time()
         self.warnings=[]
         command = runbin.Command(RUNBLAST)
-        self.blastout=command.run(timeout=1800) #died by itself at 1884, succeeded at  1225 seconds
+        self.blastout=command.run(timeout=18000) #died by itself at 1884, succeeded at  1225 seconds
         if command.status == -15: #error code from Command indicating timeout
             message = 'BLAST TOOK TOO LONG. Maximum sequences reduced to 200 BLAST results. '
             print message
@@ -226,6 +231,8 @@ class runblast(object):
         numberofhits = len(self.versions)
         print('BLAST returned '+str(numberofhits)+' sequences.')        
         self.out=[] #initialize list for recording sequences
+        
+
         if settings.USECOMPLETESEQUENCES and numberofhits != 0: #if use complete sequences is true, dowload sequences from Entrez, otherwise just use returned BLAST sequences
             start = time.time() #start timer for downloads
             print('\nDownloading '+str(numberofhits)+' complete sequences from NCBI.')
@@ -293,9 +300,135 @@ class runblast(object):
             for item in self.blastout:
                 item[1]=item[1].translate(None, '-') #remove gaps (-) since they would mess up CD-HIT later
                 self.out.append(Bio.SeqRecord.SeqRecord(Bio.Seq.Seq(item[1]),id=item[0],description="")) # add each sequence to the record
-        if filename is not None:
-            Bio.SeqIO.write(self.out, filename, "fasta") # Save all sequences identified by blast as fasta file
+        #if filename is not None:
+        #filename=HOME+'/processing/'+settings.FILENAME+'_blast_database.fasta'
+        #Bio.SeqIO.write(self.out, filename, "fasta")
+            #print 'this is filename: ' + filename # Save all sequences identified by blast as fasta file
+            #   makeblastdb -in BLAST.fasta -dbtype prot
+            
+            
+            
+class runblastmod(object):
+    def __init__(self, settings, filename=None):
+        RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs '+str(settings.MAXIMUMSEQUENCES)+' -outfmt "6 sacc sseq pident" -remote' 
+        print "\nBegining BLAST search of NCBI. This will take a few minutes."
+        start = time.time()
+        self.warnings=[]
+        command = runbin.Command(RUNBLAST)
+        self.blastout=command.run(timeout=1800) #died by itself at 1884, succeeded at  1225 seconds
+        if command.status == -15: #error code from Command indicating timeout
+            message = 'BLAST TOOK TOO LONG. Maximum sequences reduced to 200 BLAST results. '
+            print message
+            RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs 200 -outfmt "6 saccver sseq pident" -remote' #repeat blast search with only 200 max sequences
+            print "Begining BLAST search of NCBI. This will take a few minutes."
+            start = time.time()
+            self.warnings=message
+            command = runbin.Command(RUNBLAST)
+            self.blastout=command.run(timeout=2000)
+            if command.status == -15: #error code from Command indicating timeout
+                cleanexit('BLAST STILL TOOK LONG! Even after reducing maximum sequences. Giving up.',keeptemp=settings.KEEPTEMPFILES)
+        if command.status != 0: #any other error code
+            cleanexit('BLAST FAILED. I do not know why, check your inputs, internet connection, etc.',keeptemp=settings.KEEPTEMPFILES)
 
+        #temporary data set to skip actual blast search for testing
+        '''
+        self.blastout=[0,"""WP_083418319    PCPSFLIEHDRGLVLFDAGFDPRGLDDMAAYYPEISKALPMAGNRDLGIDRQLDGLGYRPSQISYVIPSHLHFDHAGGLYLFPDSTFLMGSGEMAFALQAHDKPQ---AGFFRVEDLLPTRHFDW--IETAHDFDLFGDGSVVLLFSPGHTPGSLALFVRLPNQ-NIILSGDVCHFPLEVDMGIIATSSFSPSYATF-ALRRLRMISKAWDARIWIQHEEDHWNEWPHAPE 26.840
+        WP_073456977    PMPAYLIEHPKGLVLFDTMLVPDAADDPERVYGPLAEHLGLKYTREQRVDNQIKALGYRLEDVTHVIASHTHFDHSGGLYLFPHAKFYVGEGELRFAL--WPDPAGAGFFRQADIEA--TRSFNW--VQVGFDHDLFGDGSVVVLHTPGHTPGELSLLVRL-KSRNFILTGDTVHLRQALEDEIPMP---YDSNTELAIRSIRRLKLLRESADATVWITHDPEDWAEFQHAPYCY       29.362
+        WP_049268273    ESYEIPVPWFLLTHPDGFTLIDGGLAVEGLKDPFAYWGGAVEQFKPVMPEEQGCL-EQLKRIGVAPEDIRYVILSHLHSDHTGAIGRFPHATHVVQRREYEYAFA--PDWFTSGAYCRYDYD---HPELNWFFLNGLSEDNYDLYGDGTLQCIFTPGHSPGHQSFLIRLSSGTNFTLAIDAAYTLDHYHERAL-PGLMTSATDVAQSVQKLRQLTERYNAILIPGHDPEEWEKIRLAPAWY 29.876
+        WP_025778256    LAVPIPTFLIQHEGGLLVFDTGLATDAAGDPARAYGPLAEAFDMSFPPEARIDTQLESLGFSTSDVTDVVLSHMHFDHTGGLELFPTARGFIGEGEL-----AYSRSPRRLDAAMYREEDIAAAGQIDWLEIPQGVDHDIFGDGSVVVLSMPGHTHGTLSLKLSPPDHRTIILTSDAAHLQSNIDETTGMPLD-----VDTRNKERSLRRLRLLASQPNTTVWANHDPDHWKQFRR      27.966
+        OCL02351        KLWLLHVGNLECDEAWFKRGGGTSTLSNPHPNRERRKLIMVSVLIEHPVEGLILFETGSGKDY--PE-IWGAPINDIFARVDYTEEQELDVQIKKTGHDIKDVKMVVIGHLHLDHAGGLEYFRNTGIPIYVHEKELKHAFYSVATKSDLGVY----LPHYLTFDLNW--VPFSGAFLEIAQGLN-LHHAPGHTPGLCILQVNMPKSGAWIFTTDMYHVSENFEESVPQGWLAREHDDWVRSNHMIHMLQRRTGARMVFGHCTKALEGLNMAPHAY       26.545"""]
+        '''
+        end = time.time()
+        print('BLAST search took '+str(int(end - start))+' seconds')
+        self.blastout=self.blastout[1].splitlines() #redefines BLASTOUT as the second item in the list, since BLASTOUT is the stdout from the blast search, all the data is in position 1
+        for index in range(len(self.blastout[:])): #for each sequence split at the white space (between VERSION and sequence)
+            self.blastout[index]=self.blastout[index].split()
+        self.versions = [item[0] for item in self.blastout]
+        numberofhits = len(self.versions)
+        print('BLAST returned '+str(numberofhits)+' sequences.')        
+        self.out=[] #initialize list for recording sequences
+    
+        if settings.USECOMPLETESEQUENCES and numberofhits != 0: #if use complete sequences is true, dowload sequences from Entrez, otherwise just use returned BLAST sequences
+            start = time.time() #start timer for downloads
+            print('\nDownloading '+str(numberofhits)+' complete sequences from NCBI.')
+            Bio.Entrez.email=settings.EMAIL
+            Bio.Entrez.tool = "Consensus Finder"
+            def fetchseqs(ids, maxtries):
+                retmax=len(ids)
+                tries=1
+                while tries <= maxtries:
+                    try:
+                        handle = Bio.Entrez.efetch(db="protein", id=ids, retmax=retmax, rettype="fasta", retmode="text") #retrieving all sequences from Entrez, db="sequences"
+                        newseqs = list(Bio.SeqIO.parse(handle, "fasta"))
+                        handle.close()
+                        #assert len(newseqs)==retmax
+                        time.sleep(1) #delay to avoid flooding entrez server
+                        return newseqs
+                    except httplib.HTTPException, e:
+                        print('Network problem on try %s of %s: %s')  % (tries+1,maxtries,e)
+                        tries += 1
+                        if tries <= maxtries:
+                            time.sleep(3**tries) #delay to avoid flooding entrez server
+                            print('Trying again...')
+                        else:
+                            print('Giving up')
+                            print('Try at a less busy time of day, or request fewer sequences')
+                            cleanexit(message='Network problem trying to communicate with Entrez. Try again at a less busy time of day, or request fewer sequences')
+                    except AssertionError:
+                        print('Entrez faild to return all the sequences asked for on try %s of %s') % (tries+1,maxtries)
+                        tries += 1
+                        if tries <= maxtries:
+                            time.sleep(3**tries) #delay to avoid flooding entrez server
+                            print('Trying again...')
+                        else:
+                            print('Giving up')
+                            print('Try at a less busy time of day, or request fewer sequences')
+                            cleanexit(message='Network problem trying to communicate with Entrez. Try again at a less busy time of day, or request fewer sequences')
+                    except:
+                        print('Entrez faild to return the requsted sequences asked for on try %s of %s') % (tries+1,maxtries)
+                        tries += 1
+                        if tries <= maxtries:
+                            time.sleep(3**tries) #delay to avoid flooding entrez server
+                            print('Trying again...')
+                        else:
+                            print('Giving up')
+                            print('Try at a less busy time of day, or request fewer sequences')
+                            cleanexit(message='Network problem trying to communicate with Entrez. Try again at a less busy time of day, or request fewer sequences')
+            #break the list of sequences into chunks
+            chunksize=500
+            chunks=[ self.versions[x:x+chunksize] for x in xrange(0, len(self.versions), chunksize)]
+            for index, chunk in enumerate(chunks):
+                versionlist=",".join(chunk)
+                print('Downloading sequences %s to %s of %s total') % (index*chunksize+1, index*chunksize+len(chunk), len(self.versions))
+                self.out=self.out+fetchseqs(versionlist, 3) #fetch a chunk of sequences and add it on to the list
+            print('Downloaded '+str(len(self.out))+' sequences')
+            #sanity check to make sure we got all the requested sequences.
+            try:
+                assert numberofhits==len(self.out)
+            except:
+                print('Did not get the expected '+str(numberofhits)+' sequences from Entrez.')
+                print('Continuing with only '+str(len(self.out))+' sequences.')
+                self.warnings.append('WARNING! Entrez only returned '+len(self.out)+' sequences of '+str(numberofhits)+' requested. Results based on '+len(self.out)+' sequences.')
+            end = time.time()
+            print('Downloading sequences took '+str(int(end - start))+' seconds.')
+        else:
+            for item in self.blastout:
+                item[1]=item[1].translate(None, '-') #remove gaps (-) since they would mess up CD-HIT later
+                self.out.append(Bio.SeqRecord.SeqRecord(Bio.Seq.Seq(item[1]),id=item[0],description="")) # add each sequence to the record
+        
+        filename=HOME+'/processing/predatabase.fasta'
+        print filename
+        Bio.SeqIO.write(self.out, filename, "fasta")
+        MAKEDATABASE = HOME+'/binaries/makeblastdb -in '+filename+' -out machlearn_database -dbtype prot'
+        print MAKEDATABASE
+        command = runbin.Command(MAKEDATABASE)
+        command.run() 
+            
+            
+            
+            
+            
+            
 #Run CD-HIT
 #needs settings and sequences as a list of Bio SeqRecord objects
 #returns 'out'= sequences as a list of Biopython SeqRecord objects, and (if write=True) also writes fasta formatted sequences to file.
