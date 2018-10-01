@@ -89,7 +89,7 @@ class PDB(object):
 		for i in range(0, len(heteroname), 10):
 		        reswriter.writerow(["["+str(heterocode[i])+"]"+" "+ " ".join([str(v) for v in heteroname[i:i+10]])])
 		if not rescode[0] <= ares <= rescode[len(resname)-1]:
-			CF.cleanexit("Residue number not in range. Enter residue between "+str(rescode[0])+" and "+str(rescode[len(resname)]-1))
+			CF.cleanexit("Residue number not in range. Enter residue between "+str(rescode[0])+" and "+str(rescode[len(resname)-1]))
 		##creating simple and detailed outputs
 		sf = open(os.path.join(outfilebase, "simple_output" + '.csv'), 'wt')
 		df = open(os.path.join(outfilebase, "detailed_output" + '.csv'), 'wt')
