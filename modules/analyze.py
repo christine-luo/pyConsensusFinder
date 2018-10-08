@@ -3,6 +3,7 @@ import sys #need sys to use system variables
 import numpy as np # need numpy for arrays and the like
 import Bio.SeqIO
 import Bio.Seq
+import CF
  
 #Array of single letter amino acid cods for use in arrays. 
 IDS = np.zeros([22,1],dtype=object)
@@ -147,8 +148,8 @@ def ratioconsensus(query, FREQS, ratio):
             wtfreq = float(FREQS[(aalist.index(wtaa)),index])
             consensusfreq = float(FREQS[(aalist.index(consensus)),index])
             if (ratio * wtfreq) < consensusfreq: #if the consensus of a residue is greater than the threshold
-                print "Residue number " + str(int(index) + 1)
-                print str(int(100*consensusfreq)) + '% is at least ' + str(ratio) + ' times greater than ' + str(int(100*wtfreq)) + '%'
+                #print "Residue number " + str(int(index) + 1)
+                #print str(int(100*consensusfreq)) + '% is at least ' + str(ratio) + ' times greater than ' + str(int(100*wtfreq)) + '%'
                 thissuggestion=res_to_change(wtaa,(index+1), consensus, consensusfreq, wtfreq)
                 mutations.append(thissuggestion)
     return mutations
@@ -176,7 +177,7 @@ def cutoffconsensus(query, FREQS, cutoff):
 #Takes a list of suggested mutations as 'res_to_change' objects, sorts by % conserved, removes duplicates.
 #Returns modified mutations array in with TYPE data types, and human readable suggested mutations list.
 #If given filename, will save human readable suggested mutation list as text file.
-def formatmutations(mutations_with_dups):
+def formatmutations(mutations_with_dups,settings):
     seen_mutations=set()
     mutations=[]
     for obj in mutations_with_dups:
@@ -191,6 +192,13 @@ def formatmutations(mutations_with_dups):
     else:
         for i in mutations: #for each suggested mutation
             SUGGESTED_MUTATIONS.append("Change " + i.wt + " " + str(i.res) + " to " + i.sug + " (" + str(int(100*i.freq)) + "% of similar proteins have " + i.sug +", only " + str(int(100*i.wtfreq)) + "% have "+ i.wt + ")" ) #add new suggestion on to any existing "SUGGESTED_MUTATIONS"
+        #print mutations
+        for i in mutations: #for each suggested mutation
+            CF.MACHLEARN_MUTATIONS.append(str(settings.RATIO)+', '+str(settings.MAXIMUMSEQUENCES)+', '+i.wt+', '+str(i.res)+', '+i.sug)
+        #print "MACHINE LEARNING MUTATIONS ARRAY"
+        #print CF.MACHLEARN_MUTATIONS
+    np.savetxt(("./completed/MACHLEARN_MUTATIONS_ARRAY.csv"),CF.MACHLEARN_MUTATIONS,delimiter=",",fmt="%s") #save file with AA names and counts
+
     return mutations, SUGGESTED_MUTATIONS
 
 #define mutation list based on settings attributes of RATIO and/or CONSESUSTHRESHOLD and using trimmed alignment of sequences to identify query sequence (first sequence in alignment), and array of amino acid frequencies matching amino acid positions.
@@ -205,9 +213,8 @@ def mutations(settings, alignment, freqs):
             mutations = np.append(mutations, ratiomutations)
     else:
     	mutations = ratiomutations
-    mutations, output = formatmutations(mutations)
+    mutations, output = formatmutations(mutations, settings)
     return mutations, output
-    
 #Save output suggestions file with any warnings that have been added
 def saveoutput(settings, warnings, output, filename):
     file = open(filename,'wb')
