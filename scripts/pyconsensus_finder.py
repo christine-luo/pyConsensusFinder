@@ -11,7 +11,7 @@ import sys
 HOME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 configfile = HOME+"/config/config.cfg"
 defaults = {
-            'File_Name' : "None",
+            'File_Name' : "4eb0.fasta",
             'Email' : "None",
             'Maximum_Sequences' : "2000",
             'Blast_E_Value' : "1e-3",
@@ -25,7 +25,7 @@ defaults = {
             'Chain' : 'A',
             'Angstrom' : "10",
             'Residue' : "56",
-            'PDB_Name' : "None",
+            'PDB_Name' : None,
             'Blast_binary' : HOME+"/binaries/blastp",
             'CDHIT_binary' : HOME+"/binaries/cd-hit",
             'ClustalO_binary' : HOME+"/binaries/clustalo-1.2.4-Ubuntu-x86_64",
@@ -54,7 +54,7 @@ parser.add_argument('--CDHIT',type=str,default=defaults['CDHIT_binary'],help=arg
 parser.add_argument('--CLUSTAL',type=str,default=defaults['ClustalO_binary'],help=argparse.SUPPRESS)
 args = parser.parse_args()
 
-if len(args.PDB) == 4:
+if args.PDB and len(args.PDB) == 4:
     response = urllib2.urlopen('https://www.rcsb.org/pdb/download/downloadFastaFiles.do?structureIdList={}&compressionType=uncompressed'.format(args.PDB))
     html = response.read()
     with open(HOME+'/uploads/{}.fasta'.format(args.PDB), "w") as f:
@@ -64,8 +64,6 @@ if len(args.PDB) == 4:
             if line.strip('\n') in ("<head>"):
                 CF.cleanexit('PDB code not found.')   
     args.FILENAME='{}.fasta'.format(args.PDB)
-else:
-    CF.cleanexit('Your PDB code should be four letters long.')
 
 if args.PDB!="None" and args.FILENAME!="None.fasta":
     message = 'Entered both a PDB code and a default file name. Using the PDB code, {}'.format(args.PDB)
