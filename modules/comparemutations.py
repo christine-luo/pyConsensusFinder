@@ -24,7 +24,8 @@ for mach_row in c1:
     row = 1
     for training_row in traininglist:
         results_row = mach_row
-        if mach_row[6].strip() == training_row[1].strip() and str(mach_row[7].strip()) == str(training_row[2].strip()) and mach_row[8].strip()==training_row[3].strip():
+        if training_row[0] == '1EY0' and mach_row[6].strip() == training_row[1].strip() and str(mach_row[7].strip()) == str(training_row[2].strip()) and mach_row[8].strip()==training_row[3].strip():
+            results_row.append(training_row[6])
             c3.writerow(results_row)
         row = row + 1
 
