@@ -10,8 +10,8 @@ if libdir not in sys.path:
 
 HOME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
-f1 = file(HOME+'/completed/1vqb_trimmed_mutations.csv', 'r')
-f2 = file(HOME+'/completed/1vqb_scores.csv', 'w')
+f1 = file(HOME+'/completed/1BNI_trimmed_mutations.csv', 'r')
+f2 = file(HOME+'/completed/1BNI_scores.csv', 'w')
 
 c1 = csv.reader(f1)
 c2 = csv.writer(f2)
@@ -21,7 +21,7 @@ score = 0
 
 for current_row in c1:
     if current_row[0:5]==prev_row[0:5]:
-        if float(current_row[9])<0:
+        if float(current_row[9])<=0:
             score = score-(2*float(current_row[9])**2)
         elif float(current_row[9]>0):
             score = score+float(current_row[9])**2
@@ -30,8 +30,6 @@ for current_row in c1:
         index=[0,1,2,3,4,5,10]
         score_row=[prev_row[i] for i in index]
         c2.writerow(score_row)
-        score=0
+        score=float(current_row[9])
     prev_row = current_row
-
-
 f1.close()
