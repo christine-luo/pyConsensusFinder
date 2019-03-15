@@ -10,26 +10,47 @@ if libdir not in sys.path:
 
 HOME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
-f1 = file(HOME+'/completed/1BNI_trimmed_mutations.csv', 'r')
-f2 = file(HOME+'/completed/1BNI_scores.csv', 'w')
+f1 = file(HOME+'/completed/3gb1_trimmed_mutations.csv', 'r')
+f2 = file(HOME+'/completed/3gb1_scores.csv', 'w')
+
 
 c1 = csv.reader(f1)
 c2 = csv.writer(f2)
 
 prev_row = next(c1)
-score = 0
+if float(prev_row[11])>=0.5:
+    score = 1
+
+pH=float(prev_row[9])
+temp=float(prev_row[10])
+count=1
 
 for current_row in c1:
     if current_row[0:5]==prev_row[0:5]:
-        if float(current_row[9])<=0:
-            score = score-(2*float(current_row[9])**2)
-        elif float(current_row[9]>0):
-            score = score+float(current_row[9])**2
+        pH=pH+float(current_row[9])
+        temp=temp+float(current_row[10])
+        count=count+1
+
+        if float(current_row[11])>=0.5:
+            score = score+1
+
     else:
+        pH=pH/count
+        temp=temp/count
+        score=score/count
+        prev_row.append(pH)
+        prev_row.append(temp)
         prev_row.append(score)
-        index=[0,1,2,3,4,5,10]
+        
+        index=[0,1,2,3,4,5,12,13,14]
         score_row=[prev_row[i] for i in index]
         c2.writerow(score_row)
-        score=float(current_row[9])
+        if float(current_row[11])>=0.5:
+            score = score+1
+        pH=float(current_row[9])
+        temp=float(current_row[10])
+        count=1
     prev_row = current_row
+
+
 f1.close()
