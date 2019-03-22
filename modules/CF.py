@@ -17,7 +17,7 @@ import numpy as np # need numpy for arrays and the like
 HOME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 #Main CF program, takes settings object and runs blast, cdhit, and clustalo. Then trims gaps, calculates counts, frequencies, and consensus at each position. Finally produces an output file with suggested mutations.
 MACHLEARN_MUTATIONS=[]
-MACHLEARN_MUTATIONS.append('Ratio, MaxBlast, WT, Res, Sug')
+MACHLEARN_MUTATIONS.append('EValue, MaxBlast, CompleteSeq, Redundancy, ConThresh, ConRatio, WT, Res, Sug')
 
 class CF(object):
     def __init__(self,defaults=None,configfile=None,settings=None,write=True):
@@ -33,7 +33,6 @@ class CF(object):
         print'download complete sequences from Entrez: '+str(settings.USECOMPLETESEQUENCES)
         print'Clustal omega alignment iterations: '+str(settings.ALIGNMENTITERATIONS)
         print'threshold for removing redundant sequences: '+str(settings.MAXIMUMREDUNDANCYTHRESHOLD)
-        print 'Clustalo Binary: ' +str(settings.CLUSTAL)
         warnings=[]
         #Run CF checks to check all settings, return any warnings to warnings variable
         warnings=warnings+checks(settings).warnings
@@ -52,38 +51,44 @@ class CF(object):
             summary_output=None
         #run binaries, pass results from blast to cdhit, and from cdhit to clustalo
         self.blastmod=runblastmod(settings)
-        for settings.MAXIMUMSEQUENCES in range(10000, 0,-1000):
-            for settings.BLASTEVALUE in np.linspace(1.00E-01,1.00E-30,31):
-                print str(settings.BLASTEVALUE) + ' is the blast evalue'
-                self.blast=runblast(settings,self.blastmod)
-                if len(self.blast.versions)==0: #sanity check, make sure we have data
-                    print 'Blast Returned zero hits'
-                self.cdhit=runcdhit(settings,self.blast.out)
-                if len(self.cdhit.out)==0: #sanity check, make sure we have data
-                    cleanexit('CD-HIT returned zero sequences. Cannot continue without sequences.', keeptemp=settings.KEEPTEMPFILES)
-                self.clustalo=runclustalo(settings,self.cdhit.out)
-                
-                    #processing steps from analyze module.
-                     #PART OF CODE TO LOOP
-                output = open(HOME+'/completed/' + 'machine-learning' + '.txt', 'w+')
-                for settings.RATIO in range(1, 101):
-                    self.aaaray = analyze.aaaray(self.clustalo.out)
-                    self.trimmed = analyze.trimmer(self.aaaray, sequenceids=self.clustalo.out, filename=trimmed_output)
-                    self.counts = analyze.aacounts(self.trimmed, filename=counts_output)
-                    self.freqs = analyze.aafrequencies(self.counts, filename=freqs_output)
-                    self.consensus = analyze.consensus(self.freqs, filename=consensus_output)
-                    self.mutations, self.output = analyze.mutations(settings, self.trimmed, self.freqs)
-                    self.warnings=warnings + self.blast.warnings
-                    self.settings = settings
-                    if write:
-                        analyze.saveoutput(settings, self.warnings, self.output, summary_output)
-                    message = 'The consensus ratio is: ' + str(settings.RATIO) + '\n' + 'The maximum blast sequences is: '+str(settings.MAXIMUMSEQUENCES) +'\n'
-                    print message
-                    output.write(message + '\n')
-                    for i in self.output[:]:
-                        print(i)
-                        output.write(i + '\n')
-                output.close()
+        x=[0.1]
+        a=0.1
+        for i in range(1,11):
+            a=a/1000
+            x.append(a)
+        for settings.MAXIMUMSEQUENCES in [10000,5000,2000,1000]:
+            for settings.BLASTEVALUE in x:
+                for settings.USECOMPLETESEQUENCES in False,True:
+                    self.blast=runblast(settings,self.blastmod)
+                    if len(self.blast.versions)==0: #sanity check, make sure we have data
+                        print 'Blast Returned zero hits'
+                    else:
+                        for settings.MAXIMUMREDUNDANCYTHRESHOLD in [.7,.9,.95,.98,1]:
+                            self.cdhit=runcdhit(settings,self.blast.out)
+                            if len(self.cdhit.out)==0: #sanity check, make sure we have data
+                                cleanexit('CD-HIT returned zero sequences. Cannot continue without sequences.', keeptemp=settings.KEEPTEMPFILES)
+                            self.clustalo=runclustalo(settings,self.cdhit.out)
+                                #processing steps from analyze module.
+                            output = open(HOME+'/completed/' + 'machine-learning' + '.txt', 'w+')
+                            for settings.RATIO in [1,2,4,8,16,32,64,100]:
+                                for settings.CONSENSUSTHRESHOLD in [.05,.1,.2,.4,.6,.8,.9,.99]: 
+                                    self.aaaray = analyze.aaaray(self.clustalo.out)
+                                    self.trimmed = analyze.trimmer(self.aaaray, sequenceids=self.clustalo.out, filename=trimmed_output)
+                                    self.counts = analyze.aacounts(self.trimmed, filename=counts_output)
+                                    self.freqs = analyze.aafrequencies(self.counts, filename=freqs_output)
+                                    self.consensus = analyze.consensus(self.freqs, filename=consensus_output)
+                                    self.mutations, self.output = analyze.mutations(settings, self.trimmed, self.freqs)
+                                    self.warnings=warnings + self.blast.warnings
+                                    self.settings = settings
+                                    if write:
+                                        analyze.saveoutput(settings, self.warnings, self.output, summary_output)
+                                    message = 'The consensus ratio is: ' + str(settings.RATIO) + '\n' + 'The maximum blast sequences is: '+str(settings.MAXIMUMSEQUENCES) +'\n'
+                                    print message
+                                    output.write(message + '\n')
+                                    for i in self.output[:]:
+                                        print(i)
+                                        output.write(i + '\n')
+                            output.close()
 
 
 #clean up any files in /processing and exit the program displaying any error messages.
@@ -248,7 +253,7 @@ class runblast(object):
         self.out=[] #initialize list for recording sequences
         
 
-        if settings.USECOMPLETESEQUENCES and numberofhits != 0: #if use complete sequences is true, dowload sequences from Entrez, otherwise just use returned BLAST sequences
+        if settings.USECOMPLETESEQUENCES is "True" and numberofhits != 0: #if use complete sequences is true, download sequences from Entrez, otherwise just use returned BLAST sequences
             start = time.time() #start timer for downloads
             print('\nDownloading '+str(numberofhits)+' complete sequences from NCBI.')
             Bio.Entrez.email=settings.EMAIL
@@ -354,7 +359,6 @@ class runblastmod(object):
         for index in range(len(self.blastout[:])): #for each sequence split at the white space (between VERSION and sequence)
             self.blastout[index]=self.blastout[index].split()
         self.blastoutput=self.blastout
-        np.savetxt(("./completed/blast_out.csv"),self.blastout,delimiter=", ",fmt="%s") #save file with AA names and counts
 
         self.versions = [item[0] for item in self.blastout]
         numberofhits = len(self.versions)
@@ -434,11 +438,8 @@ class runblastmod(object):
         print ('Creating database of sequences.')
         command = runbin.Command(MAKEDATABASE)
         command.run() 
-            
-            
-            
-            
-            
+
+ 
 #Run CD-HIT
 #needs settings and sequences as a list of Bio SeqRecord objects
 #returns 'out'= sequences as a list of Biopython SeqRecord objects, and (if write=True) also writes fasta formatted sequences to file.
