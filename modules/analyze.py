@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import division
 import sys #need sys to use system variables
 import numpy as np # need numpy for arrays and the like
 import Bio.SeqIO
@@ -52,6 +53,7 @@ def trimmer(AAA, sequenceids=None, filename=None):
         for index in range(len(AAA[:,0])): #alternate ">[GI number]" and sequences
             sequenceids[index].seq = Bio.Seq.Seq(''.join(AAA[(index),:]))
         Bio.SeqIO.write(sequenceids, filename, "fasta")
+    print (AAA)
     return AAA
 
 #Returns an array of amino acid counts given an array of aligned sequences with each element a single position.
@@ -59,31 +61,31 @@ def trimmer(AAA, sequenceids=None, filename=None):
 def aacounts(AAA, filename=None): 
     COUNTS = np.zeros([22, len(AAA[0,:])],dtype=object) #makes array the length of the alingment with 22 rows (20AAs + "-" + "other")
     for index in range(len(AAA[0,:])): # for each position along the alingment, count occourances of each AA
-        print (AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[0,index]=-math.log(AAA[:,index].tolist().count("G")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[1,index]=-math.log(AAA[:,index].tolist().count("P")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[2,index]=-math.log(AAA[:,index].tolist().count("A")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[3,index]=-math.log(AAA[:,index].tolist().count("V")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[4,index]=-math.log(AAA[:,index].tolist().count("L")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[5,index]=-math.log(AAA[:,index].tolist().count("I")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[6,index]=-math.log(AAA[:,index].tolist().count("M")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[7,index]=-math.log(AAA[:,index].tolist().count("C")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[8,index]=-math.log(AAA[:,index].tolist().count("F")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[9,index]=-math.log(AAA[:,index].tolist().count("Y")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[10,index]=-math.log(AAA[:,index].tolist().count("W")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[11,index]=-math.log(AAA[:,index].tolist().count("H")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[12,index]=-math.log(AAA[:,index].tolist().count("K")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[13,index]=-math.log(AAA[:,index].tolist().count("R")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[14,index]=-math.log(AAA[:,index].tolist().count("Q")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[15,index]=-math.log(AAA[:,index].tolist().count("N")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[16,index]=-math.log(AAA[:,index].tolist().count("E")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[17,index]=-math.log(AAA[:,index].tolist().count("D")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[18,index]=-math.log(AAA[:,index].tolist().count("S")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[19,index]=-math.log(AAA[:,index].tolist().count("T")/AAA[:,index].tolist().count(AAA[0,index]))
-        COUNTS[20,index]=-math.log(AAA[:,index].tolist().count("-")/AAA[:,index].tolist().count(AAA[0,index]))#empty spaces
+        
+        COUNTS[0,index]=AAA[:,index].tolist().count("G")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[1,index]=AAA[:,index].tolist().count("P")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[2,index]=AAA[:,index].tolist().count("A")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[3,index]=AAA[:,index].tolist().count("V")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[4,index]=AAA[:,index].tolist().count("L")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[5,index]=AAA[:,index].tolist().count("I")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[6,index]=AAA[:,index].tolist().count("M")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[7,index]=AAA[:,index].tolist().count("C")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[8,index]=AAA[:,index].tolist().count("F")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[9,index]=AAA[:,index].tolist().count("Y")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[10,index]=AAA[:,index].tolist().count("W")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[11,index]=AAA[:,index].tolist().count("H")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[12,index]=AAA[:,index].tolist().count("K")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[13,index]=AAA[:,index].tolist().count("R")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[14,index]=AAA[:,index].tolist().count("Q")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[15,index]=AAA[:,index].tolist().count("N")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[16,index]=AAA[:,index].tolist().count("E")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[17,index]=AAA[:,index].tolist().count("D")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[18,index]=AAA[:,index].tolist().count("S")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[19,index]=AAA[:,index].tolist().count("T")/AAA[:,index].tolist().count(AAA[0,index])
+        COUNTS[20,index]=AAA[:,index].tolist().count("-")/AAA[:,index].tolist().count(AAA[0,index])#empty spaces
         COUNTS[21,index]=(len(AAA[:,index]) - sum(COUNTS[:,index].tolist())) #other, not counted above
     IDCOUNTS = np.hstack((IDS,COUNTS)) #make list with AA counts and names of AAs
-    np.savetxt(("FREQTABLE.csv"),IDCOUNTS,delimiter=",",fmt="%s") #save file with AA names and counts
+    np.savetxt((HOME+"/completed/FREQTABLE.csv"),IDCOUNTS,delimiter=",",fmt="%s") #save file with AA names and counts
     return COUNTS
 
 #Returns a frequency array from an array of amino acid counts.
