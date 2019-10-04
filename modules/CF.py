@@ -5,6 +5,7 @@ import Bio.Entrez
 import Bio.SeqRecord
 import Bio.Seq
 import sys
+import csv
 import runbin
 import time
 import StringIO
@@ -12,6 +13,7 @@ import _mypath
 import analyze
 import ConfigParser
 import httplib
+import math
 import numpy as np # need numpy for arrays and the like
 
 HOME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -51,14 +53,14 @@ class CF(object):
             summary_output=None
         #run binaries, pass results from blast to cdhit, and from cdhit to clustalo
         self.blastmod=runblastmod(settings)
+        CONSENSUS_ENERGIES=[]
         x=[0.1]
         a=0.1
         for i in range(1,11):
             a=a/1000
             x.append(a)
-        for settings.MAXIMUMSEQUENCES in [10000,5000,2000,1000]:
+        for settings.MAXIMUMSEQUENCES in [10000,5000,2000,1000,500]:
             for settings.BLASTEVALUE in x:
-                for settings.USECOMPLETESEQUENCES in False,True:
                     self.blast=runblast(settings,self.blastmod)
                     if len(self.blast.versions)==0: #sanity check, make sure we have data
                         print 'Blast Returned zero hits'
@@ -69,26 +71,29 @@ class CF(object):
                                 cleanexit('CD-HIT returned zero sequences. Cannot continue without sequences.', keeptemp=settings.KEEPTEMPFILES)
                             self.clustalo=runclustalo(settings,self.cdhit.out)
                                 #processing steps from analyze module.
-                            output = open(HOME+'/completed/' + 'machine-learning' + '.txt', 'w+')
-                            for settings.RATIO in [1,2,4,8,16,32,64,100]:
-                                for settings.CONSENSUSTHRESHOLD in [.05,.1,.2,.4,.6,.8,.9,.99]: 
-                                    self.aaaray = analyze.aaaray(self.clustalo.out)
-                                    self.trimmed = analyze.trimmer(self.aaaray, sequenceids=self.clustalo.out, filename=trimmed_output)
-                                    self.counts = analyze.aacounts(self.trimmed, filename=counts_output)
-                                    self.freqs = analyze.aafrequencies(self.counts, filename=freqs_output)
-                                    self.consensus = analyze.consensus(self.freqs, filename=consensus_output)
-                                    self.mutations, self.output = analyze.mutations(settings, self.trimmed, self.freqs)
-                                    self.warnings=warnings + self.blast.warnings
-                                    self.settings = settings
-                                    if write:
-                                        analyze.saveoutput(settings, self.warnings, self.output, summary_output)
-                                    message = 'The consensus ratio is: ' + str(settings.RATIO) + '\n' + 'The maximum blast sequences is: '+str(settings.MAXIMUMSEQUENCES) +'\n'
-                                    print message
-                                    output.write(message + '\n')
-                                    for i in self.output[:]:
-                                        print(i)
-                                        output.write(i + '\n')
-                            output.close()
+                            self.aaaray = analyze.aaaray(self.clustalo.out)
+                            self.trimmed = analyze.trimmer(self.aaaray, sequenceids=self.clustalo.out, filename=trimmed_output)
+                            self.counts = analyze.aacounts(self.trimmed, filename=counts_output)
+                            self.freqs = analyze.aafrequencies(self.counts, filename=freqs_output)
+                            self.consensus = analyze.consensus(self.freqs, filename=consensus_output)
+                            self.warnings=warnings + self.blast.warnings
+                            self.settings = settings
+                            with open(HOME+"/completed/FREQTABLE.csv") as csvfile:
+                                reader = csv.reader(csvfile) # change contents to floats
+                                for row in reader: # each row is a list
+                                    for index in row:
+                                        print index
+                                        if index>0 and type(index) is not str:
+                                            index=-math.log(index)
+                                    param=[settings.MAXIMUMSEQUENCES, settings.BLASTEVALUE, settings.MAXIMUMREDUNDANCYTHRESHOLD]
+                                    row1=np.append(row, param)
+                                    CONSENSUS_ENERGIES.append(row1)
+        
+        with open(HOME+"/completed/FREQTABLE1.csv","w+") as my_csv:
+            csvWriter = csv.writer(my_csv,delimiter=',')
+            csvWriter.writerows(CONSENSUS_ENERGIES)
+                                
+   
 
 
 #clean up any files in /processing and exit the program displaying any error messages.
