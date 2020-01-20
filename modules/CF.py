@@ -54,18 +54,16 @@ class CF(object):
         #run binaries, pass results from blast to cdhit, and from cdhit to clustalo
         self.blastmod=runblastmod(settings)
         CONSENSUS_ENERGIES=[]
-        x=[0.1]
-        a=0.1
-        for i in range(1,11):
-            a=a/1000
-            x.append(a)
-        for settings.MAXIMUMSEQUENCES in [10000,5000,2000,1000,500]:
-            for settings.BLASTEVALUE in x:
+
+        evalues,maxsequences,maxredundancy,experimental_mutations=CFloopParameters()
+        
+        for settings.MAXIMUMSEQUENCES in maxsequences:
+            for settings.BLASTEVALUE in evalues:
                     self.blast=runblast(settings,self.blastmod)
                     if len(self.blast.versions)==0: #sanity check, make sure we have data
                         print 'Blast Returned zero hits'
                     else:
-                        for settings.MAXIMUMREDUNDANCYTHRESHOLD in [.7,.9,.95,.98,1]:
+                        for settings.MAXIMUMREDUNDANCYTHRESHOLD in maxredundancy:
                             self.cdhit=runcdhit(settings,self.blast.out)
                             if len(self.cdhit.out)==0: #sanity check, make sure we have data
                                 cleanexit('CD-HIT returned zero sequences. Cannot continue without sequences.', keeptemp=settings.KEEPTEMPFILES)
@@ -80,21 +78,107 @@ class CF(object):
                             self.settings = settings
                             with open(HOME+"/completed/FREQTABLE.csv") as csvfile:
                                 reader = csv.reader(csvfile) # change contents to floats
-                                for row in reader: # each row is a list
+                                for row in reader: # each row is a list ##I DON'T THINK THIS WORKS LMAO
+                                    row_log=[]
                                     for index in row:
-                                        print index
-                                        if index>0 and type(index) is not str:
-                                            index=-math.log(index)
+                                        if type(index) is not str:
+                                            if index>0:
+                                                index=-math.log(index)
+                                                print index
+                                        row_log.append(index)
                                     param=[settings.MAXIMUMSEQUENCES, settings.BLASTEVALUE, settings.MAXIMUMREDUNDANCYTHRESHOLD]
-                                    row1=np.append(row, param)
+                                    row1=np.append(row_log, param)
                                     CONSENSUS_ENERGIES.append(row1)
         
-        with open(HOME+"/completed/FREQTABLE1.csv","w+") as my_csv:
-            csvWriter = csv.writer(my_csv,delimiter=',')
-            csvWriter.writerows(CONSENSUS_ENERGIES)
-                                
-   
+        natlog=naturallog(CONSENSUS_ENERGIES)
+        comparing(natlog,experimental_mutations)
+        scoring()
+        
+        
+def CFloopParameters():
+    evalues=[0.01]
+    a=0.01
+    for i in range(1,15):
+        a=a/1000
+        evalues.append(a)
+    maxsequences=[10000,5000,2000,1000,500, 100, 50, 10,3]
+    maxredundancy= [.7,.72,.74,.76,.8,.9,.95,.98,1]
+    
+    experimental_mutations=file(HOME+'/completed/1ey0full.csv', 'r')
+    
+    return evalues,maxsequences,maxredundancy,experimental_mutations
 
+
+def naturallog(CONSENSUS_ENERGIES):
+    natlog = []
+    for row in CONSENSUS_ENERGIES:
+        new_row=[]
+        for i in range(len(row)):
+            if i !=0 and float(row[i])>0 and i< len(row)-3:
+                row[i]=float(row[i])
+                row[i]=-0.592126*math.log(row[i])
+                new_row.append(row[i])
+            else:
+                new_row.append(row[i])
+        natlog.append(new_row)
+    return natlog
+
+def comparing(natlog,experimental_mutations):
+    f1 = experimental_mutations
+    f3 = file(HOME+'/completed/1ey0_new_scoring_1.csv', 'w')
+    
+    c3 = csv.writer(f3)
+
+    
+    traininglist = natlog
+    
+    for mach_row in f1:
+        row = 1
+        for training_row in traininglist:
+            if training_row[0]==mach_row[3]: #if same substitution? 
+                results_row=[]
+                difference = (float(training_row[int(mach_row[2])+1]) - float(mach_row[4]))**2 
+                results_row.append(training_row[150])
+                results_row.append(training_row[151])
+                results_row.append(training_row[152])
+                results_row.append(difference)
+                c3.writerow(results_row)
+
+def scoring():
+    
+    f1 = file(HOME+'/completed/1ey0_new_scoring_1.csv', 'r')
+    f3 = file(HOME+'/completed/1ey0_all_scores_final.csv', 'w')
+    
+    c1 = csv.reader(f1)
+    c3 = csv.writer(f3)
+    
+    
+    prev_row = next(c1)
+    mutations_array=[]
+    score=0
+    
+    for current_row in c1:
+        if current_row[0:3]==prev_row[0:3]:
+            score=score+float(current_row[3])
+        else:
+            new_row=[]
+            new_row.append(prev_row[0])
+            new_row.append(prev_row[1])
+            new_row.append(prev_row[2])
+            new_row.append(score)
+            mutations_array.append(new_row)
+            c3.writerow(new_row)
+    
+            score=0
+        prev_row = current_row
+    
+            
+    f1.close()
+    f3.close()
+
+                                
+
+        
 
 #clean up any files in /processing and exit the program displaying any error messages.
 def cleanexit(message=None,keeptemp=False): #function to exit cleanly by deleting any temporary files (unless indicated to save them)
