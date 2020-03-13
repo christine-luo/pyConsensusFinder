@@ -141,7 +141,7 @@ def aafrequencies(COUNTS, filename=None):
             MI.append(i)
             MI.append(j)
  
-    #IDS=aaletters()
+    IDS=aaletters()
     IDFREQS = np.hstack((IDS,FREQS)) #make list with names and AA frequencies
     if filename:
         np.savetxt((filename),IDFREQS,delimiter=",",fmt="%s") #save file with AA names and frequencies
