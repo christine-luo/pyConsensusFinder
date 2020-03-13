@@ -3,7 +3,8 @@ import sys #need sys to use system variables
 import numpy as np # need numpy for arrays and the like
 import Bio.SeqIO
 import Bio.Seq
- 
+import itertools
+
 #Array of single letter amino acid cods for use in arrays. 
 IDS = np.zeros([22,1],dtype=object)
 IDS[:,0]=['G', 'P', 'A', 'V', 'L', 'I', 'M', 'C', 'F', 'Y', 'W', 'H', 'K', 'R', 'Q', 'N', 'E', 'D', 'S', 'T', '-', 'other']   
@@ -111,12 +112,40 @@ def aafrequencies(COUNTS, filename=None):
         FREQS[19,index]=np.float64(COUNTS[19,index])/sum(np.float64(COUNTS[:20,index]))
         FREQS[20,index]=np.float64(COUNTS[20,index])/sum(np.float64(COUNTS[:,index])) #frequency of gaps "-" as fraction of all seqs
         FREQS[21,index]=np.float64(COUNTS[21,index])/sum(np.float64(COUNTS[:,index])) #frequency of gaps "other" as fraction of all seqs
+    #this is the correlation stuff 
+    columns = FREQS.shape[1]
+    MI=[]
+
+    aanumbers=range(20)
+    print aanumbers
+    xycombos = itertools.product(aanumbers,repeat=2)
+    columncombos=itertools.combinations(range(columns),2)
+    
+    for ccombo in columncombos:
+        sumMI=0
+        for xcombo in xycombos:
+            i=ccombo[0]
+            j=ccombo[1]
+            x=xcombo[0]
+            y=xcombo[1]
+            
+            Px=FREQS[x, i]
+            Py=FREQS[y, j]
+            Pxy=FREQS[x, i] * FREQS[y, j]
+            
+            indMI=Pxy*math.log(Pxy/(Px*Py))
+            
+            sumMI=sumMI+indMI
+        #what MI is too highly correlated?? test?? 
+        if sumMI>10:
+            MI.append(i)
+            MI.append(j)
  
     #IDS=aaletters()
     IDFREQS = np.hstack((IDS,FREQS)) #make list with names and AA frequencies
     if filename:
         np.savetxt((filename),IDFREQS,delimiter=",",fmt="%s") #save file with AA names and frequencies
-    return FREQS
+    return FREQS,MI
 
 #Calculates the consensus sequence from given amino acid frequency array.
 #Returns consensus sequence as an array of amino acid one letter codes.
@@ -194,7 +223,7 @@ def formatmutations(mutations_with_dups):
     return mutations, SUGGESTED_MUTATIONS
 
 #define mutation list based on settings attributes of RATIO and/or CONSESUSTHRESHOLD and using trimmed alignment of sequences to identify query sequence (first sequence in alignment), and array of amino acid frequencies matching amino acid positions.
-def mutations(settings, alignment, freqs):
+def mutations(settings, alignment, freqs, MI):
     print('\nIdentifying suggested mutations')
     if settings.RATIO:
         ratiomutations = ratioconsensus(alignment[0], freqs, settings.RATIO)
@@ -205,6 +234,12 @@ def mutations(settings, alignment, freqs):
             mutations = np.append(mutations, ratiomutations)
     else:
     	mutations = ratiomutations
+     #add correlation stuff here? 
+     for i in MI:
+        for ind,j in enumerate(mutations):
+           if i==j:
+           print mutations[ind]
+           del mutations[ind]
     mutations, output = formatmutations(mutations)
     return mutations, output
     
