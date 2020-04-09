@@ -77,19 +77,17 @@ class CF(object):
                             self.warnings=warnings + self.blast.warnings
                             self.settings = settings
                             with open(HOME+"/completed/FREQTABLE.csv") as csvfile:
-                                reader = csv.reader(csvfile) # change contents to floats
-                                for row in reader: # each row is a list ##I DON'T THINK THIS WORKS LMAO
-                                    row_log=[]
-                                    for index in row:
-                                        if type(index) is not str:
-                                            if index>0:
-                                                index=-math.log(index)
-                                                print index
-                                        row_log.append(index)
-                                    param=[settings.MAXIMUMSEQUENCES, settings.BLASTEVALUE, settings.MAXIMUMREDUNDANCYTHRESHOLD]
-                                    row1=np.append(row_log, param)
-                                    CONSENSUS_ENERGIES.append(row1)
-        
+                                with open(HOME+"/completed/uptodateFREQTABLES.csv", 'a') as csv2:
+                                    csv_writer = csv.writer(csv2)
+
+                                    reader = csv.reader(csvfile) # change contents to floats
+                                    for row in reader: # each row is a list ##I DON'T THINK THIS WORKS LMAO
+                                        row.append(settings.MAXIMUMSEQUENCES)
+                                        row.append(settings.BLASTEVALUE)
+                                        row.append(settings.MAXIMUMREDUNDANCYTHRESHOLD)
+                                        CONSENSUS_ENERGIES.append(row)
+                                        csv_writer.writerow(row_log)
+
         natlog=naturallog(CONSENSUS_ENERGIES)
         comparing(natlog,experimental_mutations)
         scoring()
@@ -101,7 +99,7 @@ def CFloopParameters():
     for i in range(1,15):
         a=a/1000
         evalues.append(a)
-    maxsequences=[10000,5000,2000,1000,500, 100, 50, 10,3]
+    maxsequences=[2000,1000,500, 100, 50, 10,3]
     maxredundancy= [.7,.72,.74,.76,.8,.9,.95,.98,1]
     
     experimental_mutations=file(HOME+'/completed/1ey0full.csv', 'r')
@@ -116,24 +114,29 @@ def naturallog(CONSENSUS_ENERGIES):
         for i in range(len(row)):
             if i !=0 and float(row[i])>0 and i< len(row)-3:
                 row[i]=float(row[i])
-                row[i]=-0.592126*math.log(row[i])
+                row[i]=-0.592126*math.log(float(row[i]))
                 new_row.append(row[i])
             else:
                 new_row.append(row[i])
         natlog.append(new_row)
+    with open(HOME+'/completed/NATLOG_FREQTABLE_1ey0.csv','w+') as my_csv:
+        csvWriter = csv.writer(my_csv,delimiter=',')
+        csvWriter.writerows(natlog)
+
     return natlog
 
 def comparing(natlog,experimental_mutations):
     f1 = experimental_mutations
-    f3 = file(HOME+'/completed/1ey0_new_scoring_1.csv', 'w')
+    f2 = file(HOME+'/completed/NATLOG_FREQTABLE_1ey0.csv', 'r')
+    f3 = file(HOME+'/completed/1ey0_new_scoring_111.csv', 'w')
     
+    c1 = csv.reader(f1)
+    c2 = csv.reader(f2)
     c3 = csv.writer(f3)
 
-    
-    traininglist = natlog
+    traininglist = list(c2)
     
     for mach_row in f1:
-        row = 1
         for training_row in traininglist:
             if training_row[0]==mach_row[3]: #if same substitution? 
                 results_row=[]
@@ -143,6 +146,10 @@ def comparing(natlog,experimental_mutations):
                 results_row.append(training_row[152])
                 results_row.append(difference)
                 c3.writerow(results_row)
+    
+    f1.close()
+    f2.close()
+    f3.close()
 
 def scoring():
     
@@ -292,7 +299,7 @@ class checks(object):
 class runblast(object):
     def __init__(self, settings, runblastmod, filename=None):
         # add evalue
-        RUNBLAST = settings.BLAST+' -db machlearn_database -query '+HOME+'/uploads/'+settings.FILENAME+' -max_target_seqs '+str(settings.MAXIMUMSEQUENCES)+' -outfmt "6 sacc sseq pident"' 
+        RUNBLAST = settings.BLAST+' -db machlearn_database -query '+HOME+'/uploads/'+settings.FILENAME+' -max_target_seqs '+str(settings.MAXIMUMSEQUENCES)+' -outfmt "6 sacc sseq pident evalue"' 
         print "\nBeginning BLAST search of NCBI. This will take a few minutes."
         print RUNBLAST
         start = time.time()
@@ -302,7 +309,7 @@ class runblast(object):
         if command.status == -15: #error code from Command indicating timeout
             message = 'BLAST TOOK TOO LONG. Maximum sequences reduced to 200 BLAST results. '
             print message
-            RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs 200 -outfmt "6 saccver sseq pident" -remote' #repeat blast search with only 200 max sequences
+            RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs 200 -outfmt "6 saccver sseq pident evalue" -remote' #repeat blast search with only 200 max sequences
             print "Beginning BLAST search of NCBI. This will take a few minutes."
             start = time.time()
             self.warnings=message
@@ -414,7 +421,7 @@ class runblast(object):
             
 class runblastmod(object):
     def __init__(self, settings, filename=None):
-        RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs '+str(settings.MAXIMUMSEQUENCES)+' -outfmt "6 sacc sseq pident evalue" -remote' 
+        RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs '+str(2000)+' -outfmt "6 sacc sseq pident evalue" -remote' 
         print "\nBeginning BLAST search of NCBI. This will take a few minutes."
         start = time.time()
         self.warnings=[]
@@ -423,7 +430,7 @@ class runblastmod(object):
         if command.status == -15: #error code from Command indicating timeout
             message = 'BLAST TOOK TOO LONG. Maximum sequences reduced to 200 BLAST results. '
             print message
-            RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs 200 -outfmt "6 saccver sseq pident" -remote' #repeat blast search with only 200 max sequences
+            RUNBLAST = settings.BLAST+' -db nr -query '+HOME+'/uploads/'+settings.FILENAME+' -evalue '+str(settings.BLASTEVALUE)+' -max_target_seqs '+str(2000)+' -outfmt "6 sacc sseq pident evalue" -remote' #repeat blast search with only 200 max sequences
             print "Beginning BLAST search of NCBI. This will take a few minutes."
             start = time.time()
             self.warnings=message
