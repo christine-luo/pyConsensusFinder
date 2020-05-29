@@ -1,0 +1,41 @@
+5/28 summary
+
+[scoring w/ weighted “good” and “bad” bins: bigger is better
+rmsd: smaller is better 
+slope: larger is better
+r squared: larger is better]
+
+10,000 sequences
+4240 sequences after cd-hit
+scoring w/ weighted “good” and “bad” bins: 0.203916560238
+rmsd: 1.829376
+slope: 0.181
+r squared: 0.0432
+
+1,000 sequences
+66 sequences after cd-hit
+scoring w/ weighted “good” and “bad” bins: 0.116858237548
+rmsd: 1.62936391
+slope: 0.3298
+r squared: 0.0383
+
+700 sequences
+29 sequences after cd-hit
+scoring w/ weighted “good” and “bad” bins: 0.182205193699
+rmsd: 1.66580644
+slope: 0.3242
+r squared: 0.0288
+
+500 sequences
+5 sequences after cd-hit
+scoring w/ weighted “good” and “bad” bins: 0 (predicted everything to be bad) 
+rmsd: 1.79789367
+slope: 0.1767
+r squared: 0.0027
+
+400 sequences
+3 sequences after cd-hit
+scoring w/ weighted “good” and “bad” bins: 0 (predicted everything to be bad)
+rmsd: 1.8176884
+slope: 0.1798
+r squared: 0.0008
