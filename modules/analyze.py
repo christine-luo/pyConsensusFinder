@@ -8,6 +8,7 @@ import CF
 import _mypath
 import os
 import math
+import itertools
 HOME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
  
 #Array of single letter amino acid cods for use in arrays. 
@@ -61,37 +62,81 @@ def trimmer(AAA, sequenceids=None, filename=None):
 def aacounts(AAA, filename=None): 
     COUNTS = np.zeros([22, len(AAA[0,:])],dtype=object) #makes array the length of the alingment with 22 rows (20AAs + "-" + "other")
     for index in range(len(AAA[0,:])): # for each position along the alingment, count occourances of each AA
-        
-        COUNTS[0,index]=AAA[:,index].tolist().count("G")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[1,index]=AAA[:,index].tolist().count("P")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[2,index]=AAA[:,index].tolist().count("A")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[3,index]=AAA[:,index].tolist().count("V")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[4,index]=AAA[:,index].tolist().count("L")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[5,index]=AAA[:,index].tolist().count("I")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[6,index]=AAA[:,index].tolist().count("M")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[7,index]=AAA[:,index].tolist().count("C")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[8,index]=AAA[:,index].tolist().count("F")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[9,index]=AAA[:,index].tolist().count("Y")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[10,index]=AAA[:,index].tolist().count("W")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[11,index]=AAA[:,index].tolist().count("H")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[12,index]=AAA[:,index].tolist().count("K")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[13,index]=AAA[:,index].tolist().count("R")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[14,index]=AAA[:,index].tolist().count("Q")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[15,index]=AAA[:,index].tolist().count("N")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[16,index]=AAA[:,index].tolist().count("E")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[17,index]=AAA[:,index].tolist().count("D")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[18,index]=AAA[:,index].tolist().count("S")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[19,index]=AAA[:,index].tolist().count("T")/AAA[:,index].tolist().count(AAA[0,index])
-        COUNTS[20,index]=AAA[:,index].tolist().count("-")/AAA[:,index].tolist().count(AAA[0,index])#empty spaces
+        COUNTS[0,index]=AAA[:,index].tolist().count("G")
+        COUNTS[1,index]=AAA[:,index].tolist().count("P")
+        COUNTS[2,index]=AAA[:,index].tolist().count("A")
+        COUNTS[3,index]=AAA[:,index].tolist().count("V")
+        COUNTS[4,index]=AAA[:,index].tolist().count("L")
+        COUNTS[5,index]=AAA[:,index].tolist().count("I")
+        COUNTS[6,index]=AAA[:,index].tolist().count("M")
+        COUNTS[7,index]=AAA[:,index].tolist().count("C")
+        COUNTS[8,index]=AAA[:,index].tolist().count("F")
+        COUNTS[9,index]=AAA[:,index].tolist().count("Y")
+        COUNTS[10,index]=AAA[:,index].tolist().count("W")
+        COUNTS[11,index]=AAA[:,index].tolist().count("H")
+        COUNTS[12,index]=AAA[:,index].tolist().count("K")
+        COUNTS[13,index]=AAA[:,index].tolist().count("R")
+        COUNTS[14,index]=AAA[:,index].tolist().count("Q")
+        COUNTS[15,index]=AAA[:,index].tolist().count("N")
+        COUNTS[16,index]=AAA[:,index].tolist().count("E")
+        COUNTS[17,index]=AAA[:,index].tolist().count("D")
+        COUNTS[18,index]=AAA[:,index].tolist().count("S")
+        COUNTS[19,index]=AAA[:,index].tolist().count("T")
+        COUNTS[20,index]=AAA[:,index].tolist().count("-") #empty spaces
         COUNTS[21,index]=(len(AAA[:,index]) - sum(COUNTS[:,index].tolist())) #other, not counted above
     IDCOUNTS = np.hstack((IDS,COUNTS)) #make list with AA counts and names of AAs
-    np.savetxt((HOME+"/completed/FREQTABLE.csv"),IDCOUNTS,delimiter=",",fmt="%s") #save file with AA names and counts
-    return COUNTS
+    if filename:
+        np.savetxt((filename),IDCOUNTS,delimiter=",",fmt="%s") #save file with AA names and counts
+    return IDCOUNTS
+
+def aapairs(AAA, filename=None): 
+    columns = len(AAA[0,:])
+    aas='GPAVLIMCFYWHKRQNEDST'
+    xycombos = itertools.product(aas,repeat=2)
+    columncombos=itertools.combinations(range(columns),2)
+    
+    PAIRS = np.zeros([len(xycombos)*len(columncombos), 5],dtype=object) #makes array the length of the alingment with 22 rows (20AAs + "-" + "other")
+
+    counting=-1
+    
+    for ccombo in columncombos:
+        for xcombo in xycombos:
+            counting=counting+1
+            i=ccombo[0]
+            j=ccombo[1]
+            x=xcombo[0]
+            y=xcombo[1]
+            
+            print(x)
+            print(y)
+            print(i)
+            print(j)
+            
+            PAIRS[counting,0]=i
+            PAIRS[counting,1]=j
+
+            for index in range(len(IDS[:,0])):
+                if IDS[index,0]==x:
+                    x=index
+                if IDS[index,0]==y:
+                    y=index
+            PAIRS[counting,2]=x
+            PAIRS[counting,3]=y
+            
+            aapaircount=0 
+            
+            for row in range(len(AAA[:,0])):
+                if AAA[row,i]==x and AAA[row,j]==y: 
+                    aapaircount=aapaircount+1 
+            PAIRS[4].append(aapaircount)
+    print(PAIRS)
+    np.savetxt((HOME+"/completed/FREQpairs.csv"),PAIRS,delimiter=",",fmt="%s") #save file with AA names and counts
+    return PAIRS
 
 #Returns a frequency array from an array of amino acid counts.
 #Frequencies represented as a decimal.
 #If given a filename, frequency array is exported as a csv.
-def aafrequencies(COUNTS, filename=None):
+def aafrequencies(COUNTS, PAIRS, filename=None):
     print('\nCalculating amino acid frequencies')
     FREQS = np.zeros_like(COUNTS) #make an array for calculating frequencies of each AA
     FREQS = np.float64(FREQS) #it needs to be numbers
@@ -122,9 +167,55 @@ def aafrequencies(COUNTS, filename=None):
     #IDS=aaletters()
     IDFREQS = np.hstack((IDS,FREQS))  #make list with names and AA frequencies
     CF.MACHLEARN_MUTATIONS.append(IDFREQS)
-    np.savetxt(("freqtable.csv"),IDFREQS,delimiter=",",fmt="%s") #save file with AA names and frequencies
-    return IDFREQS
 
+    #this is the correlation stuff 
+    columns = FREQS.shape[1]
+    MI=[]
+
+    aanumbers=range(20)
+    xycombos = itertools.product(aanumbers,repeat=2)
+    columncombos=itertools.combinations(range(columns),2)
+
+    
+    for ccombo in columncombos:
+        sumMI=0
+        for xcombo in xycombos:
+            i=ccombo[0]
+            j=ccombo[1]
+            x=xcombo[0]
+            y=xcombo[1]
+            
+            Px=FREQS[x, i]
+            Py=FREQS[y, j]
+            for row in range(len(PAIRS[:,0])):
+                if PAIRS[row, :4] == [i,j,x,y]:
+                    Pxy=PAIRS[row,4]
+                    print('Pxy:')
+                    print(Pxy)
+                    print('Px*Py:')
+                    print(Px*Py)
+            # print ('Pxy, Px, Py:')
+            # print Pxy
+            # print Px
+            # print Py
+
+            if Pxy and Px and Py > 0:
+                indMI=Pxy*math.log(Pxy/(Px*Py))
+            else:
+                indMI=0
+
+            sumMI=sumMI+indMI
+        #what MI is too highly correlated?? test?? 
+        if sumMI>10:
+            MI.append([i,j,sumMI])
+    np.asarray(MI)
+    np.savetxt((HOME+"/completed/MIvalues.csv"),MI,delimiter=",",fmt="%s")       
+        
+            
+            
+    np.savetxt((HOME+"/completed/frequencytable.csv"),IDFREQS,delimiter=",",fmt="%s") #save file with AA names and frequencies
+    return IDFREQS
+    
 #Calculates the consensus sequence from given amino acid frequency array.
 #Returns consensus sequence as an array of amino acid one letter codes.
 #If given a filename, consensus sequence is saved in FASTA format to filename.
