@@ -48,11 +48,11 @@ actualfinal=np.append(IDS, final, axis=1)
 
 #withAA = numpy.hstack((AA_list, final))
 ##save as freq table
-np.savetxt(HOME+'/completed/1ey0_400_frequencytable.csv', actualfinal, delimiter=",", fmt='%s')
+np.savetxt(HOME+'/completed/frequencytable.csv', actualfinal, delimiter=",", fmt='%s')
 
 
 #########same as file above, open again
-f2 = file(HOME+'/completed/1ey0_400_frequencytable.csv', 'r')
+f2 = file(HOME+'/completed/frequencytable.csv', 'r')
 
 c2 = csv.reader(f2)
 
@@ -69,7 +69,7 @@ for row in traininglist:
             row[i]==float(row[i])
 
             if float(row[i]) == float(0):
-                #######NUMBER OF SEQUENCES!!!!
+                ###set the zeros to be the 'worst' based on number of sequences
                 row[i]=float(1/(numberofsequences+1))
                 row[i]=-0.592126*math.log(float(row[i]))
                 print 'working for the zeros'
@@ -81,17 +81,19 @@ for row in traininglist:
             pass
 
 
+##nptraining is the new natural log / con energy table
 
 nptraining=np.array(traininglist)
 
 AA_list=nptraining[:,0]
 AA_list[0]='G'
 
+##npcounts is the natural log / con energy table w/o the amino acid column
 npcounts=nptraining[:,1:]
 npcounts = npcounts.astype(np.float)
 
 
-
+##change the WT zeros we changed earlier to the 'worst' energy back to actual zeros 
 transpose = npcounts.transpose()
 index=range(len(npcounts[1]))
 for i in index:
@@ -109,15 +111,17 @@ print IDS.shape
 
 withAA = np.hstack((IDS, final))
 
-np.savetxt(HOME+'/completed/new_1bjp_100_table_6_18.csv', withAA, delimiter=",", fmt='%s')
+##this SHOULD be the table with the natural log consensus energies 
+
+np.savetxt(HOME+'/completed/consensusenergytable.csv', withAA, delimiter=",", fmt='%s')
 
 if protein=='1bjp.fasta':
     f1 = file(HOME+'/completed/1bjp_experimental_data.csv', 'r')
 if protein=='1ey0.fasta':
     f1 = file(HOME+'/completed/1ey0full.csv', 'r')
 
-f2 = file(HOME+'/completed/new_1bjp_100_table_6_18.csv', 'r')
-f3 = file(HOME+'/completed/1bjp_100_testrun_6_18.csv', 'w')
+f2 = file(HOME+'/completed/consensusenergytable.csv', 'r')
+f3 = file(HOME+'/completed/predictionandexperimental.csv', 'w')
 
 
 c1 = csv.reader(f1)
@@ -131,6 +135,7 @@ traininglist = list(c2)
 nonzerocount=0
 newmatrix=[]
 
+##table with the actual vs prediction, for 1ey0 and for 1bjp
 if protein=='1ey0.fasta':
     for mach_row in c1:
         row = 1
@@ -138,9 +143,11 @@ if protein=='1ey0.fasta':
             if training_row[0]==mach_row[3]: #if same substitution? 
                 results_row=[]
                 #difference = (float(training_row[int(mach_row[2])]) + float(mach_row[4]))**2 
+                ##this is... just so the prediction and actual are rows 3 and 4 and they match 1bjp in the next section... 
                 difference=0
                 results_row.append(difference)
                 results_row.append(difference)
+                
                 results_row.append(training_row[int(mach_row[2])]) #prediction 
                 results_row.append(-float(mach_row[4])) #actual
                 c3.writerow(results_row)
@@ -174,8 +181,8 @@ f3.close()
 
 
 
-f3 = file(HOME+'/completed/1bjp_100_testrun_6_18.csv', 'r')
-f2 = file(HOME+'/completed/1bjp_100_roc_7_2.csv', 'w')
+f3 = file(HOME+'/completed/predictionandexperimental.csv', 'r')
+f2 = file(HOME+'/completed/rocscores.csv', 'w')
 
 c3 = csv.reader(f3)
 c2 = csv.writer(f2)
@@ -199,6 +206,7 @@ negcount=0
 postot=0
 poscount=0
 
+##sorting the predictions and finding the largest and smallest to normalize (0-1) 
 nptraininglist=np.array(traininglist)
 tosort=nptraininglist[:,2]
 tosort = tosort.astype(np.float)
@@ -228,7 +236,8 @@ for row in traininglist:
 
     #     ###for ROC
     #     row[1]=0
-
+    
+    ### changing experimental to 0 and 1s 
     ###### for 1ey0 ----
     if protein=='1ey0.fasta':
         if float(row[3])<0:
@@ -241,7 +250,8 @@ for row in traininglist:
             row[3]=1
         else:
             row[3]=0
-
+    
+    ##changing predictions to be between 0 and 1 range 
     ### when 1ey0 below, use row[0]
     row[2]=-float(row[2])
 
@@ -261,6 +271,7 @@ for row in traininglist:
 
     c2.writerow(row)
 
+## calculating ROC score 
 roclist=np.array(traininglist)
 roclist=roclist[:,2:]
 roclist=roclist.astype(np.float)
