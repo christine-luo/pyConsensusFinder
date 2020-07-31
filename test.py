@@ -1,12 +1,3 @@
-protein=queryfile
-
-numberofsequences=len(cdhitout)
-haszeros=haszero
-maxsequences=maxsequence
-maxredundancy=maxredun
-evalue=evalues
-
-##set sequences based on protein
 if protein=='1bjp.fasta':
     word = 'PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASKVRR'
     sequence=list(word)
